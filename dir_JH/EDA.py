@@ -85,6 +85,9 @@ df_merged = df_merged.drop(drop_cols, axis=1)
 
 # Drop Lot ID
 df_merged = df_merged.drop("LOT ID - Dam", axis=1)
+df_merged = df_merged.drop("LOT ID - AutoClave", axis=1)
+df_merged = df_merged.drop("LOT ID - Fill1", axis=1)
+df_merged = df_merged.drop("LOT ID - Fill2", axis=1)
 
 features = df_merged.columns
 
@@ -105,7 +108,7 @@ for f in features:
     else:                       # Target and...
         features_other.append(f)
 
-feature_idx = 3
+feature_idx = 5
 print(f"{features_dam[feature_idx]} // {features_calve[feature_idx]} // {features_fill1[feature_idx]} // {features_fill2[feature_idx]}")
 
 # Column : model.suffix
