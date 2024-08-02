@@ -1,10 +1,11 @@
 import os
 from pprint import pprint
 import matplotlib.pyplot as plt
-import seaborn as sns
+import seaborn as sb
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
@@ -91,25 +92,26 @@ df_merged = df_merged.drop("LOT ID - Fill2", axis=1)
 
 features = df_merged.columns
 
-features_dam   = [] # 79
-features_calve = [] # 21
-features_fill1 = [] # 39
-features_fill2 = [] # 49
-features_other = [] # 2
+features_dam = []  # 79
+features_calve = []  # 21
+features_fill1 = []  # 39
+features_fill2 = []  # 49
+features_other = []  # 2
 for f in features:
-    if f[-3:] == 'Dam':         # Dam features
+    if f[-3:] == 'Dam':  # Dam features
         features_dam.append(f)
-    elif f[-9:] == 'AutoClave': # AutoClave features
+    elif f[-9:] == 'AutoClave':  # AutoClave features
         features_calve.append(f)
-    elif f[-5:] == 'Fill1':     # Fill1 features
+    elif f[-5:] == 'Fill1':  # Fill1 features
         features_fill1.append(f)
-    elif f[-5:] == 'Fill2':     # Fill2 features
+    elif f[-5:] == 'Fill2':  # Fill2 features
         features_fill2.append(f)
-    else:                       # Target and...
+    else:  # Target and...
         features_other.append(f)
 
-feature_idx = 5
-print(f"{features_dam[feature_idx]} // {features_calve[feature_idx]} // {features_fill1[feature_idx]} // {features_fill2[feature_idx]}")
+feature_idx = 9
+print(
+    f"{features_dam[feature_idx]} // {features_calve[feature_idx]} // {features_fill1[feature_idx]} // {features_fill2[feature_idx]}")
 
 # Column : model.suffix
 fs = ['Model.Suffix - Dam', 'Model.Suffix - AutoClave', 'Model.Suffix - Fill1', 'Model.Suffix - Fill2']
@@ -123,3 +125,18 @@ for i, col in enumerate(fs):
 
     for j, value in enumerate(df['Frequency'].values):
         axs[i].text(value_counts.index[j], value, str(value), ha='center', va='bottom')
+plt.show()
+plt.close()
+
+# Label Encoder
+le = LabelEncoder()
+
+features_int = []
+features_str = []
+for col in df_merged.columns:
+    try:
+        df_merged[col] = df_merged[col].astype(int)
+        features_int.append(col)
+    except:
+        df_merged[col] = le.fit_transform(df_merged[col])
+        features_str.append(col)
