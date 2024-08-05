@@ -29,22 +29,25 @@ def read_excel_file(file_path: str, header: int = None) -> pd.DataFrame:
 
 
 if __name__ == '__main__':
-    ROOT_DIR = "/storage/jhchoi/lgaimers_5/data"
+    ROOT_DIR = "/storage/jhchoi/lgaimers_5"
     RANDOM_STATE = 110
 
     X_Dam = read_excel_file(
-        os.path.join(ROOT_DIR, "Dam dispensing.xlsx"), header=1
+        os.path.join(ROOT_DIR, "data/Dam dispensing.xlsx"), header=1
     )
     X_AutoClave = read_excel_file(
-        os.path.join(ROOT_DIR, "Auto clave.xlsx"), header=1
+        os.path.join(ROOT_DIR, "data/Auto clave.xlsx"), header=1
     )
     X_Fill1 = read_excel_file(
-        os.path.join(ROOT_DIR, "Fill1 dispensing.xlsx"), header=1
+        os.path.join(ROOT_DIR, "data/Fill1 dispensing.xlsx"), header=1
     )
     X_Fill2 = read_excel_file(
-        os.path.join(ROOT_DIR, "Fill2 dispensing.xlsx"), header=1
+        os.path.join(ROOT_DIR, "data/Fill2 dispensing.xlsx"), header=1
     )
-    y = pd.read_csv(os.path.join(ROOT_DIR, "train_y.csv"))
+    # y   -> train       [Set ID: train ID, target: ground truth]
+    # sub -> submission  [Set ID: test ID,  target: fill with prediction]
+    y   = pd.read_csv(os.path.join(ROOT_DIR, "data/train_y.csv"))
+    sub = pd.read_csv(os.path.join(ROOT_DIR, "submission.csv"))
 
     # Rename columns
     X_Dam.columns = [i + " - Dam" for i in X_Dam.columns]
@@ -62,23 +65,25 @@ if __name__ == '__main__':
     X = pd.merge(X, X_Fill2, on="Set ID")
     X = X.drop(X[X.duplicated(subset="Set ID")].index).reset_index(drop=True)
 
-    # Merge X and y
-    df_merged = pd.merge(X, y, "inner", on="Set ID")
+    # Merge X and y -> df_train, df_test
+    df_train = pd.merge(X, y, "inner", on="Set ID")
+    df_test  = pd.merge(X, sub, "inner", on="Set ID")
 
+    # ==== Column drop ====
     # Drop columns with more than half of the values missing
     drop_cols = []
-    for column in df_merged.columns:
-        if (df_merged[column].notnull().sum() // 2) < df_merged[
-            column
-        ].isnull().sum():
+    for column in df_train.columns:
+        if (df_train[column].notnull().sum() // 2) < df_train[column].isnull().sum():
             drop_cols.append(column)
-    df_merged = df_merged.drop(drop_cols, axis=1)
+    df_train = df_train.drop(drop_cols, axis=1)
+    df_test  = df_test.drop(drop_cols, axis=1)
 
-    # Drop Lot ID
-    df_merged = df_merged.drop("LOT ID - Dam", axis=1)
-    df_merged = df_merged.drop("LOT ID - AutoClave", axis=1)
-    df_merged = df_merged.drop("LOT ID - Fill1", axis=1)
-    df_merged = df_merged.drop("LOT ID - Fill2", axis=1)
+    # Additional column drops
+    add_drop_cols = []
+    add_drop_cols += ["LOT ID - Dam", "LOT ID - AutoClave", "LOT ID - Fill1", "LOT ID - Fill2"]  # Lot ID
+
+    df_train = df_train.drop(add_drop_cols, axis=1)
+    df_test  = df_test.drop(add_drop_cols, axis=1)
 
     # 시간 정렬
     df_merged = df_merged.sort_values(by=["Collect Date - Dam"])
@@ -143,10 +148,7 @@ if __name__ == '__main__':
         f1 = f1_score(val_y, pred_y, average='weighted')
         print(f'F1 Score: {f1:.2f}')
 
-        # submission
-        df_test_y = pd.read_csv(os.path.join('/storage/jhchoi/lgaimers_5', "submission.csv"))
 
-        df_test = pd.merge(X, df_test_y, "inner", on="Set ID")
         df_test_X, submission = df_test[features_str + features_int], df_test['target']
         for col in df_test_X.columns:
             try:
