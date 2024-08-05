@@ -1,8 +1,11 @@
 import os
 from pprint import pprint
+import matplotlib.pyplot as plt
+import seaborn as sb
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
@@ -83,82 +86,69 @@ df_merged = df_merged.drop(drop_cols, axis=1)
 
 # Drop Lot ID
 df_merged = df_merged.drop("LOT ID - Dam", axis=1)
+df_merged = df_merged.drop("LOT ID - AutoClave", axis=1)
+df_merged = df_merged.drop("LOT ID - Fill1", axis=1)
+df_merged = df_merged.drop("LOT ID - Fill2", axis=1)
 
-normal_ratio = 1.0  # 1.0 means 1:1 ratio
+features = df_merged.columns
 
-df_normal = df_merged[df_merged["target"] == "Normal"]
-df_abnormal = df_merged[df_merged["target"] == "AbNormal"]
+features_dam = []  # 79
+features_calve = []  # 21
+features_fill1 = []  # 39
+features_fill2 = []  # 49
+features_other = []  # 2
+for f in features:
+    if f[-3:] == 'Dam':  # Dam features
+        features_dam.append(f)
+    elif f[-9:] == 'AutoClave':  # AutoClave features
+        features_calve.append(f)
+    elif f[-5:] == 'Fill1':  # Fill1 features
+        features_fill1.append(f)
+    elif f[-5:] == 'Fill2':  # Fill2 features
+        features_fill2.append(f)
+    else:  # Target and...
+        features_other.append(f)
 
-num_normal = len(df_normal)
-num_abnormal = len(df_abnormal)
-print(f"  Total: Normal: {num_normal}, AbNormal: {num_abnormal}")
+feature_idx = 9
+print(
+    f"{features_dam[feature_idx]} // {features_calve[feature_idx]} // {features_fill1[feature_idx]} // {features_fill2[feature_idx]}")
 
-df_normal = df_normal.sample(
-    n=int(num_abnormal * normal_ratio), replace=False, random_state=RANDOM_STATE
-)
-df_concat = pd.concat([df_normal, df_abnormal], axis=0).reset_index(drop=True)
-df_concat.value_counts("target")
+# Column : model.suffix
+fs = ['Model.Suffix - Dam', 'Model.Suffix - AutoClave', 'Model.Suffix - Fill1', 'Model.Suffix - Fill2']
+df_melted = df_merged[fs].melt(var_name='Categories', value_name='Value')
+value_counts = df_melted.value_counts().reset_index(name='Frequency')
 
-df_concat = df_concat.sort_values(by=["Collect Date - Dam"])
-df_train, df_val = train_test_split(
-    df_concat,
-    test_size=0.3,
-    stratify=df_concat["target"],
-    random_state=RANDOM_STATE,
-)
+fig, axs = plt.subplots(4, 1, figsize=(10, 15))
+for i, col in enumerate(fs):
+    df = value_counts[value_counts['Categories'] == col]
+    axs[i].bar(df['Value'], df['Frequency'])
 
+    for j, value in enumerate(df['Frequency'].values):
+        axs[i].text(value_counts.index[j], value, str(value), ha='center', va='bottom')
+plt.show()
+plt.close()
 
-def print_stats(df: pd.DataFrame):
-    num_normal = len(df[df["target"] == "Normal"])
-    num_abnormal = len(df[df["target"] == "AbNormal"])
+# Label Encoder
+le = LabelEncoder()
 
-    print(
-        f"  Total: Normal: {num_normal}, AbNormal: {num_abnormal}"
-        + f" ratio: {num_abnormal/num_normal}"
-    )
-
-
-# Print statistics
-print(f"  \tAbnormal\tNormal")
-print_stats(df_train)
-print_stats(df_val)
-
-model = RandomForestClassifier(random_state=RANDOM_STATE)
-
-features = []
-
-for col in df_train.columns:
+features_int = []
+features_str = []
+for col in df_merged.columns:
     try:
-        df_train[col] = df_train[col].astype(int)
-        features.append(col)
+        df_merged[col] = df_merged[col].astype(int)
+        features_int.append(col)
     except:
-        continue
+        df_merged[col] = le.fit_transform(df_merged[col])
+        features_str.append(col)
 
-if "Set ID" in features:
-    features.remove("Set ID")
-
-train_x = df_train[features]
-train_y = df_train["target"]
-
-model.fit(train_x, train_y)
-
-df_test_y = pd.read_csv(os.path.join('/storage/jhchoi/lgaimers_5', "submission.csv"))
-
-df_test = pd.merge(X, df_test_y, "inner", on="Set ID")
-df_test_x = df_test[features]
-
-for col in df_test_x.columns:
-    try:
-        df_test_x.loc[:, col] = df_test_x[col].astype(int)
-    except:
-        continue
-
-test_pred = model.predict(df_test_x)
-
-# 제출 데이터 읽어오기 (df_test는 전처리된 데이터가 저장됨)
-df_sub = pd.read_csv("/storage/jhchoi/lgaimers_5/submission.csv")
-df_sub["target"] = test_pred
-
-# 제출 파일 저장
-df_sub.to_csv("submission.csv", index=False)
-
+# correlation coefficient
+plt.rcParams['figure.figsize'] = (50, 50)
+sb.heatmap(df_merged.corr(),
+           annot_kws={
+               'fontsize': 13,
+               'fontweight': 'bold',
+               'fontfamily': 'serif'
+           },
+           annot=True,
+           cmap='Greens',
+           vmin=-1, vmax=1)
