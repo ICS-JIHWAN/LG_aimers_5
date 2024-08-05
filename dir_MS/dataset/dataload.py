@@ -22,7 +22,6 @@ class x_y_merge_data():
 
         one_hot_Y = self.one_hot_encoding(Y)
 
-
         return {'X': X, 'Y': Y, 'one_hot_Y':one_hot_Y}
 
     def one_hot_encoding(self, Y):
@@ -30,7 +29,6 @@ class x_y_merge_data():
 
         if Y == 'Normal':
             one_hot = 1.0
-
         elif Y == 'AbNormal':
             one_hot = 0.0
 
