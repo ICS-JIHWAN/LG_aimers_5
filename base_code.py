@@ -156,15 +156,9 @@ for col in df_test_x.columns:
 test_pred = model.predict(df_test_x)
 
 # 제출 데이터 읽어오기 (df_test는 전처리된 데이터가 저장됨)
-df_sub = pd.read_csv("submission.csv")
+df_sub = pd.read_csv("/storage/jhchoi/lgaimers_5/submission.csv")
 df_sub["target"] = test_pred
 
 # 제출 파일 저장
 df_sub.to_csv("submission.csv", index=False)
 
-# 제출 데이터 읽어오기 (df_test는 전처리된 데이터가 저장됨)
-df_sub = pd.read_csv("submission.csv")
-df_sub["target"] = test_pred
-
-# 제출 파일 저장
-df_sub.to_csv("submission.csv", index=False)

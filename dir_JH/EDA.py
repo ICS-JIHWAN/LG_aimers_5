@@ -140,3 +140,15 @@ for col in df_merged.columns:
     except:
         df_merged[col] = le.fit_transform(df_merged[col])
         features_str.append(col)
+
+# correlation coefficient
+plt.rcParams['figure.figsize'] = (50, 50)
+sb.heatmap(df_merged.corr(),
+           annot_kws={
+               'fontsize': 13,
+               'fontweight': 'bold',
+               'fontfamily': 'serif'
+           },
+           annot=True,
+           cmap='Greens',
+           vmin=-1, vmax=1)
