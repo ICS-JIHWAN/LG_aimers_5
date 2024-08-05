@@ -39,8 +39,6 @@ if __name__ == '__main__':
     df_train, df_val = train_test_split(df_concat, test_size=0.3, stratify=df_concat["target"], random_state=RANDOM_STATE)
 
 
-    model = RandomForestClassifier(random_state=RANDOM_STATE)
-
     features = []
 
     for col in df_train.columns:
@@ -56,7 +54,49 @@ if __name__ == '__main__':
     train_x = df_train[features]
     train_y = df_train["target"]
 
-    model.fit(train_x, train_y)
+    # change code
+
+    from sklearn.preprocessing import LabelEncoder
+
+    target = df_train['target'].values.tolist()
+    label_encoder = LabelEncoder()
+    train_y = np.array(label_encoder.fit_transform(target))
+
+    import keras
+    from keras.models import Sequential
+    from keras.layers import Activation, Dropout, BatchNormalization, Input, Dense
+    from keras.optimizers import Adam
+    from keras import backend as K
+
+    def f1_score(y_true, y_pred):
+        y_pred = K.round(y_pred)  # 이진 분류의 경우 y_pred를 0 또는 1로 반올림
+        tp = K.sum(K.cast(y_true * y_pred, 'float'))
+        fp = K.sum(K.cast((1 - y_true) * y_pred, 'float'))
+        fn = K.sum(K.cast(y_true * (1 - y_pred), 'float'))
+        precision = tp / (tp + fp + K.epsilon())
+        recall = tp / (tp + fn + K.epsilon())
+        f1 = 2 * (precision * recall) / (precision + recall + K.epsilon())
+        return f1
+
+
+    model = Sequential()
+    model.add(Dense(units=149, activation='relu', input_dim=149))
+    model.add(Dropout(0.1))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dropout(0.1))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dropout(0.1))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dropout(0.1))
+    model.add(Dense(units=1, activation='sigmoid'))
+
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[f1_score])
+
+    model.fit(train_x, train_y, epochs=50, validation_split=0.05)
+
+    ########--------------------------------------########
+
+    # model.fit(train_x, train_y)
 
     df_test_y = pd.read_csv(os.path.join(path, "submission.csv"))
 
@@ -71,16 +111,30 @@ if __name__ == '__main__':
 
     test_pred = model.predict(df_test_x)
 
-    # 제출 데이터 읽어오기 (df_test는 전처리된 데이터가 저장됨)
+    # change code
+
+    test_pred_1 = test_pred.reshape(-1).astype(bool)
+    result = ["AbNormal" if x else "Normal" for x in test_pred_1]
+
     df_sub = pd.read_csv("submission.csv")
     df_sub["target"] = test_pred
 
-    # 제출 파일 저장
     df_sub.to_csv("submission.csv", index=False)
 
-    # 제출 데이터 읽어오기 (df_test는 전처리된 데이터가 저장됨)
     df_sub = pd.read_csv("submission.csv")
-    df_sub["target"] = test_pred
+    df_sub["target"] = result
 
-    # 제출 파일 저장
     df_sub.to_csv("submission.csv", index=False)
+
+    ########--------------------------------------########
+
+
+    # df_sub = pd.read_csv("submission.csv")
+    # df_sub["target"] = test_pred
+    #
+    # df_sub.to_csv("submission.csv", index=False)
+    #
+    # df_sub = pd.read_csv("submission.csv")
+    # df_sub["target"] = test_pred
+    #
+    # df_sub.to_csv("submission.csv", index=False)
