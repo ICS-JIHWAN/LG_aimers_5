@@ -1,7 +1,9 @@
 import os, sys
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
+pd.set_option('display.max_columns', None)
 def data_rename_merge(path):
 
     dam = pd.read_csv(os.path.join(path, "Dam dispensing.csv"), low_memory=False)  # 62479 rows x 222 columns
@@ -40,14 +42,69 @@ def data_rename_merge(path):
     x_y_merge = x_y_merge.drop("LOT ID - Dam", axis=1)
     x_y_merge.to_csv("/storage/mskim/aimers/data/x_y_merge.csv", index=False) # 40506 rows x 189 columns
 
+def data_preprocessing(path):
+    x_y_merge = pd.read_csv(os.path.join(path, "x_y_merge.csv"), low_memory=False)
+
+    for col in x_y_merge.columns:
+        unique_value_counts = x_y_merge[col].value_counts()
+        print(unique_value_counts)
+
+    for col in x_y_merge.columns:
+        if len(x_y_merge[col].unique()) < 10:
+            unique_value_counts = x_y_merge[col].value_counts()
+            plt.figure(figsize=(12, 8))
+            grape = unique_value_counts.plot(kind='bar')
+
+            for p in grape.patches:
+                height = p.get_height()
+                grape.text(p.get_x() + p.get_width() / 2, height, f'{height}', ha='center', va='bottom')
+
+
+            plt.title('Value Counts of {}'.format(col))
+            plt.xticks(rotation=0)
+
+            plt.savefig('/storage/mskim/aimers/data_graph/{}.png'.format(col))
+
+    print(col)
+
+def data_split_month(path):
+    x_y_merge = pd.read_csv(os.path.join(path, "x_y_merge.csv"), low_memory=False)
+
+    # date_columns = []
+    # for col in x_y_merge.columns:
+    #     if "Date" in col:
+    #         date_columns.append(col)
+    # date_columns.append('target') # ['Collect Date - Dam', 'Collect Date - AutoClave', 'Collect Date - Fill1', 'Collect Date - Fill2', 'target']
+
+    date_df = x_y_merge[['Collect Date - Dam', 'Collect Date - Fill1', 'Collect Date - Fill2', 'Collect Date - AutoClave', 'target']]
+
+    sort_Dam = date_df.sort_values(by=["Collect Date - Dam"], ascending=True)
+
+    sort_Dam['Collect Date - Dam'] = pd.to_datetime(sort_Dam['Collect Date - Dam'])
+    group_Dam = sort_Dam.groupby(sort_Dam['Collect Date - Dam'].dt.to_period('M'))
+    monthly_Dam = [group for _, group in group_Dam]
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
 
     path = "/storage/mskim/aimers/data"
 
-    data_rename_merge(path)
-
+    # data_rename_merge(path)
+    # data_preprocessing(path)
+    data_split_month(path)
     x_y_merge = pd.read_csv(os.path.join(path, "x_y_merge.csv"), low_memory=False)
 
     correlation = x_y_merge.corr()
 
+    import seaborn as sns
+    import matplotlib.pyplot as plt
 
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(correlation, annot=True, cmap='coolwarm')
+    plt.show()
